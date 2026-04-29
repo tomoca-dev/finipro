@@ -1,0 +1,7 @@
+{
+  "name": "FinOps Pro - Smart Financial Control Room",
+  "description": "An enterprise-grade financial operations platform featuring AI-powered data ingestion, canonical normalization, and deep P&L analytics for modern leadership.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
