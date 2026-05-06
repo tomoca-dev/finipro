@@ -1,18 +1,12 @@
-
 import React, { useState } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { 
   ShieldCheck, LogIn, Mail, Lock, Loader2, Sparkles, 
-  UserCircle, TrendingUp, SearchCode, Settings, Users 
+  UserCircle, Activity, Globe, Zap, CheckCircle2, ChevronRight
 } from 'lucide-react';
-import { UserRole } from '../types';
 import BrandLogo from './BrandLogo';
 
-interface AuthProps {
-  onDemoLogin: (role: UserRole, name: string) => void;
-}
-
-const Auth: React.FC<AuthProps> = ({ onDemoLogin }) => {
+const Auth: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
@@ -20,6 +14,17 @@ const Auth: React.FC<AuthProps> = ({ onDemoLogin }) => {
   const [fullName, setFullName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  const handleDemoLogin = async () => {
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    setEmail('admin@tomoca.com');
+    setPassword('password123');
+    const { error } = await supabase.auth.signInWithPassword({ email: 'admin@tomoca.com', password: 'password123' });
+    if (error) setError(error.message);
+    setLoading(false);
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +42,7 @@ const Auth: React.FC<AuthProps> = ({ onDemoLogin }) => {
         options: {
           data: {
             full_name: fullName,
-            role: 'FINANCE' // Safer default role for new signups
+            role: 'FINANCE'
           }
         }
       });
@@ -50,177 +55,205 @@ const Auth: React.FC<AuthProps> = ({ onDemoLogin }) => {
     setLoading(false);
   };
 
-  const demoRoles = [
-    { 
-      role: 'CEO' as UserRole, 
-      name: 'Alex Chen', 
-      icon: <TrendingUp size={20} />, 
-      color: 'from-blue-500 to-indigo-600',
-      desc: 'Full visibility. Strategy & Governance.'
-    },
-    { 
-      role: 'FINANCE' as UserRole, 
-      name: 'Sarah Miller', 
-      icon: <SearchCode size={20} />, 
-      color: 'from-emerald-500 to-teal-600',
-      desc: 'Ledger Audit. Compliance & Ingestion.'
-    },
-    { 
-      role: 'ADMIN' as UserRole, 
-      name: 'Jordan Rex', 
-      icon: <Settings size={20} />, 
-      color: 'from-purple-500 to-pink-600',
-      desc: 'RBAC Control. Model Versioning.'
-    },
-    { 
-      role: 'DEPT_HEAD' as UserRole, 
-      name: 'Marcus V.', 
-      icon: <Users size={20} />, 
-      color: 'from-amber-500 to-orange-600',
-      desc: 'Budgeting. Unit Economics.'
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#020617] flex items-center justify-center p-6 relative overflow-hidden transition-colors duration-500">
-      {/* Background Decor */}
-      <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-blue-600/10 dark:bg-blue-600/5 blur-[150px] rounded-full"></div>
-      <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-indigo-600/10 dark:bg-indigo-600/5 blur-[150px] rounded-full"></div>
+    <div className="min-h-screen flex bg-[#050505] overflow-hidden font-sans">
+      
+      {/* Left Canvas - Dynamic Brand & Value Prop */}
+      <div className="hidden lg:flex lg:w-[65%] relative flex-col justify-between p-16 xl:p-24 overflow-hidden">
+        {/* Dynamic mesh background */}
+        <div className="absolute inset-0 bg-[#050505] z-0">
+           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,_rgba(59,130,246,0.1),transparent_70%)]"></div>
+           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_70%,_rgba(99,102,241,0.1),transparent_70%)]"></div>
+           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(231,138,34,0.05),transparent_80%)]"></div>
+           {/* Moving grid lines */}
+           <div className="absolute inset-0 opacity-20" style={{
+             backgroundImage: `linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)`,
+             backgroundSize: '60px 60px',
+             maskImage: 'radial-gradient(ellipse 80% 50% at 50% 50%, black, transparent)'
+           }}></div>
+        </div>
 
-      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
-        
-        {/* Left: Branding & Value Prop */}
-        <div className="hidden lg:block space-y-8">
-          <BrandLogo className="items-center" />
-          
-          <div className="space-y-6">
-            <h2 className="text-4xl font-extrabold text-slate-800 dark:text-slate-100 leading-tight">
-              Institutional Intelligence <br />
-              <span className="text-slate-400 dark:text-slate-500">for Modern Leadership.</span>
-            </h2>
-            <p className="text-slate-600 dark:text-slate-400 text-lg font-medium leading-relaxed max-w-md">
-Secure, AI-augmented financial control room for POS operations, store closing, reconciliation, and cleaner Peachtree handoff.
-            </p>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-6 rounded-3xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/[0.03] shadow-sm">
-              <p className="text-2xl font-black text-slate-900 dark:text-white">256-bit</p>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-1">AES Encryption</p>
-            </div>
-            <div className="p-6 rounded-3xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/[0.03] shadow-sm">
-              <p className="text-2xl font-black text-slate-900 dark:text-white">99.9%</p>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-1">Audit Accuracy</p>
-            </div>
+        <div className="relative z-10 mt-4">
+          <BrandLogo className="scale-[2.5] origin-left mb-20 ml-6" />
+          <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white backdrop-blur-md mb-12 mt-8">
+            <Sparkles size={14} className="text-blue-400" />
+            <span className="text-xs font-black uppercase tracking-widest text-slate-300">Enterprise Financial Core Engine</span>
           </div>
         </div>
 
-        {/* Right: Login & Simulation */}
-        <div className="space-y-6">
-          <div className="glass-card rounded-[40px] p-10 border border-slate-200 dark:border-white/[0.05] luxury-shadow">
-            <h3 className="text-xl font-black text-slate-900 dark:text-white mb-8 flex items-center gap-2">
-              <UserCircle size={24} className="text-blue-500" /> {mode === 'login' ? 'Authorized Access' : 'Create Account'}
-            </h3>
+        <div className="relative z-10 w-full max-w-4xl">
+          <h1 className="text-6xl lg:text-7xl font-black text-white leading-[1.1] tracking-tighter mb-10">
+            Command <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Absolute Control</span> Over Your Operations.
+          </h1>
+          <p className="text-slate-400 text-xl font-medium leading-relaxed mb-16 max-w-2xl">
+            A unified intelligence room combining zero-trust ledger compliance, automated Z-report sealing, and deep Peachtree integration capability.
+          </p>
+
+          <div className="grid grid-cols-2 gap-10">
+            {[
+              { icon: <ShieldCheck size={24}/>, label: 'Immutable Audit Trail' },
+              { icon: <Activity size={24}/>, label: 'Real-time Pos Sync' },
+              { icon: <Globe size={24}/>, label: 'Multi-node Retail' },
+              { icon: <Zap size={24}/>, label: 'Instant Reconciliation' },
+            ].map(item => (
+              <div key={item.label} className="flex items-center gap-5">
+                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 shadow-lg backdrop-blur-md">
+                  {item.icon}
+                </div>
+                <span className="text-base font-bold text-slate-300 tracking-tight">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative z-10 flex items-center gap-6 border-t border-white/10 pt-8 mt-12">
+          <div className="flex -space-x-4">
+            <div className="w-12 h-12 rounded-full bg-blue-600 border-2 border-slate-900 flex items-center justify-center text-white font-bold text-xs">AC</div>
+            <div className="w-12 h-12 rounded-full bg-indigo-600 border-2 border-slate-900 flex items-center justify-center text-white font-bold text-xs">JD</div>
+            <div className="w-12 h-12 rounded-full bg-emerald-600 border-2 border-slate-900 flex items-center justify-center text-white font-bold text-xs">+9</div>
+          </div>
+          <div>
+            <div className="flex items-center gap-1 text-yellow-400 mb-1">
+              {[1,2,3,4,5].map(i => <Sparkles key={i} size={12} className="fill-current" />)}
+            </div>
+            <p className="text-xs font-medium text-slate-400">Trusted by tier-1 enterprise teams globally.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Canvas - The Vault Login */}
+      <div className="w-full lg:w-[35%] flex items-center justify-center p-8 relative">
+        {/* Unified dark background */}
+        <div className="absolute inset-0 bg-[#050505] -z-10"></div>
+
+        
+        <div className="w-full max-w-md">
+          {/* Mobile logo fallback */}
+          <div className="lg:hidden flex justify-center mb-10">
+             <BrandLogo />
+          </div>
+
+          <div className="glass-card bg-white dark:bg-slate-900/60 rounded-[40px] p-10 border border-slate-200 dark:border-white/10 luxury-shadow relative overflow-hidden backdrop-blur-2xl">
+            {/* Glossy top highlight */}
+            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"></div>
             
-            <form onSubmit={handleAuth} className="space-y-6">
-              <div className="space-y-4">
-                {mode === 'signup' && (
-                  <div className="relative">
-                    <UserCircle size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+            <div className="mb-10 text-center">
+              <div className="w-16 h-16 bg-blue-600 rounded-[24px] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-500/30 transform rotate-3">
+                 <Lock size={28} className="text-white -rotate-3" />
+              </div>
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                {mode === 'login' ? 'Institutional Login' : 'Provision Account'}
+              </h2>
+              <p className="text-xs font-black uppercase tracking-widest text-slate-500 mt-2">
+                {mode === 'login' ? 'Authenticate to access the control room' : 'Create an administrative root account'}
+              </p>
+            </div>
+
+            <form onSubmit={handleAuth} className="space-y-5">
+              {mode === 'signup' && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Legal Name</label>
+                  <div className="relative group">
+                    <UserCircle size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                     <input 
                       type="text" 
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700 font-medium dark:text-white" 
-                      placeholder="Full Name"
+                      className="w-full bg-black/20 border border-white/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-500 font-bold text-white shadow-sm" 
+                      placeholder="John Doe"
                       required
                     />
                   </div>
-                )}
-                <div className="relative">
-                  <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                </div>
+              )}
+              
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email Address</label>
+                <div className="relative group">
+                  <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                   <input 
                     type="email" 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700 font-medium dark:text-white" 
-                    placeholder="Institutional Email"
+                    className="w-full bg-black/20 border border-white/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-500 font-bold text-white shadow-sm" 
+                    placeholder="name@institution.com"
                     required
                   />
                 </div>
-                <div className="relative">
-                  <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Security Key</label>
+                <div className="relative group">
+                  <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                   <input 
                     type="password" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700 font-medium dark:text-white" 
-                    placeholder="Security Key"
+                    className="w-full bg-black/20 border border-white/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-500 font-bold text-white shadow-sm" 
+                    placeholder="••••••••••••"
                     required
                   />
                 </div>
               </div>
 
               {error && (
-                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-600 dark:text-red-400 text-xs font-bold text-center">
-                  {error}
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-600 dark:text-red-400 text-[11px] font-bold text-center flex items-center justify-center gap-2">
+                  <ShieldCheck size={14} /> {error}
                 </div>
               )}
 
               {message && (
-                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-600 dark:text-emerald-400 text-xs font-bold text-center">
-                  {message}
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-600 dark:text-emerald-400 text-[11px] font-bold text-center flex items-center justify-center gap-2">
+                  <CheckCircle2 size={14} /> {message}
                 </div>
               )}
 
-              <button 
-                type="submit" 
-                disabled={loading}
-                className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-blue-900/20 flex items-center justify-center gap-2 group"
-              >
-                {loading ? <Loader2 size={18} className="animate-spin" /> : (
-                  <>{mode === 'login' ? 'Authorize Session' : 'Initialize Account'}</>
-                )}
-              </button>
+              <div className="pt-4">
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-blue-900/30 flex items-center justify-center gap-2 active:scale-[0.98]"
+                >
+                  {loading ? <Loader2 size={18} className="animate-spin" /> : (
+                    <>{mode === 'login' ? 'Authorize Session' : 'Seal & Provision'}</>
+                  )}
+                  {!loading && <ChevronRight size={16} />}
+                </button>
+              </div>
             </form>
 
-            <div className="mt-6 text-center">
+            <div className="mt-8 text-center border-t border-slate-200 dark:border-white/10 pt-6">
               <button 
                 onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
-                className="text-xs font-black uppercase tracking-widest text-slate-500 hover:text-blue-500 transition-colors"
+                className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-500 transition-colors"
               >
-                {mode === 'login' ? "Don't have an account? Sign Up" : "Already have an account? Log In"}
+                {mode === 'login' ? "Require an account? Provision here" : "Return to authorized login"}
+              </button>
+
+              <button 
+                type="button"
+                onClick={handleDemoLogin}
+                className="mt-6 p-4 rounded-2xl bg-white/5 border border-white/5 w-full text-left hover:bg-white/10 transition-all cursor-pointer group block"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-white transition-colors">Institutional Demo Access</p>
+                  <ChevronRight size={14} className="text-slate-500 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between items-center text-[10px] font-bold">
+                    <span className="text-slate-500">EMAIL</span>
+                    <span className="text-blue-400">admin@tomoca.com</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] font-bold">
+                    <span className="text-slate-500">KEY</span>
+                    <span className="text-blue-400">password123</span>
+                  </div>
+                </div>
               </button>
             </div>
 
-            <div className="mt-10 mb-6 flex items-center gap-4">
-              <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800"></div>
-              <span className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">Simulation Center</span>
-              <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800"></div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              {demoRoles.map(demo => (
-                <button
-                  key={demo.role}
-                  onClick={() => onDemoLogin(demo.role, demo.name)}
-                  className="group relative p-4 rounded-3xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-white/20 transition-all text-left overflow-hidden shadow-sm"
-                >
-                  <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${demo.color} opacity-0 group-hover:opacity-10 transition-opacity blur-xl`}></div>
-                  <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${demo.color} flex items-center justify-center text-white mb-3 shadow-lg transition-transform group-hover:scale-110`}>
-                    {demo.icon}
-                  </div>
-                  <h4 className="text-sm font-black text-slate-900 dark:text-white">{demo.role.replace('_', ' ')}</h4>
-                  <p className="text-[9px] text-slate-500 font-medium mt-1 leading-tight">{demo.desc}</p>
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-8 flex items-center justify-center gap-4">
-              <p className="text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-tighter flex items-center gap-2">
-                <Sparkles size={12} className="text-blue-500" /> AES-256 Multi-Zone Security
-              </p>
-            </div>
           </div>
         </div>
       </div>

@@ -28,7 +28,7 @@ import SageSecurityVault from './SageSecurityVault';
 import SageShopRegistry from './SageShopRegistry';
 import SageShopProfile from './SageShopProfile';
 import SageCoreEngine from './SageCoreEngine';
-import { User, FinancialRecord, SystemMode, CurrencyCode, ShopNode } from '../../types';
+import { User, FinancialRecord, SystemMode, CurrencyCode, ShopNode, AppTheme } from '../../types';
 import { CURRENCY_SYMBOLS } from '../../services/dataEngine';
 
 export type SageTab = 'CUSTOMERS' | 'VENDORS' | 'INVENTORY' | 'PAYROLL' | 'BANKING' | 'GL' | 'REPORTS' | 'AUDIT' | 'BATCHES' | 'CONFIG' | 'CONNECTORS' | 'INSIGHTS' | 'CONSOLIDATION' | 'AUTOMATION' | 'PREDICTIVE' | 'SECURITY' | 'CORE_ENGINE' | 'MAINTAIN_ACCOUNTS' | 'BACKUP' | 'SHOPS' | 'SHOP_PROFILE';
@@ -38,8 +38,8 @@ interface SageModeShellProps {
   onIngest: (records: FinancialRecord[]) => void;
   systemMode: SystemMode;
   onToggleSystemMode: () => void;
-  theme: 'dark' | 'light';
-  onToggleTheme: () => void;
+  theme: AppTheme;
+  onToggleTheme: (theme?: AppTheme) => void;
   currency: CurrencyCode;
   isTrainingMode: boolean;
 }

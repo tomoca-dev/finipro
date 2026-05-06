@@ -5,15 +5,85 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --app-bg: #f8fafc;
+  --app-fg: #0f172a;
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(15, 23, 42, 0.08);
+  --luxury-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.15);
+  --accent-primary: #3b82f6; /* Blue */
+}
+
+/* Midnight Theme */
+body.theme-midnight {
+  --app-bg: #0f172a; /* Slate 900 */
+  --app-fg: #f8fafc;
+  --glass-bg: rgba(30, 41, 59, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --luxury-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
+  --accent-primary: #6366f1; /* Indigo */
+}
+
+/* Obsidian Theme */
+body.theme-obsidian {
+  --app-bg: #000000;
+  --app-fg: #ffffff;
+  --glass-bg: rgba(10, 10, 10, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --luxury-shadow: 0 20px 50px -12px rgba(255, 255, 255, 0.05);
+  --accent-primary: #94a3b8; /* Silver */
+}
+
+/* Forest Theme */
+body.theme-forest {
+  --app-bg: #064e3b; /* Emerald 900 */
+  --app-fg: #ecfdf5;
+  --glass-bg: rgba(2, 44, 34, 0.7);
+  --glass-border: rgba(52, 211, 153, 0.2);
+  --luxury-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.6);
+  --accent-primary: #10b981; /* Emerald */
+}
+
+/* Amber Gold Theme */
+body.theme-amber {
+  --app-bg: #2d1a0a; /* Deep Amber Black */
+  --app-fg: #fef3c7;
+  --glass-bg: rgba(69, 39, 10, 0.7);
+  --glass-border: rgba(245, 158, 11, 0.2);
+  --luxury-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.7);
+  --accent-primary: #f59e0b; /* Amber */
+}
+
+/* Royal Amethyst Theme */
+body.theme-amethyst {
+  --app-bg: #1e1b4b; /* Deep Indigo */
+  --app-fg: #eef2ff;
+  --glass-bg: rgba(49, 46, 129, 0.7);
+  --glass-border: rgba(139, 92, 246, 0.2);
+  --luxury-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.7);
+  --accent-primary: #8b5cf6; /* Violet */
+}
+
+/* Cyber Crimson Theme */
+body.theme-crimson {
+  --app-bg: #2d0a0a; /* Deep Blood Red */
+  --app-fg: #fee2e2;
+  --glass-bg: rgba(69, 10, 10, 0.7);
+  --glass-border: rgba(239, 68, 68, 0.2);
+  --luxury-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.7);
+  --accent-primary: #ef4444; /* Red */
+}
+
+
 body {
   font-family: 'Inter', sans-serif;
+  background-color: var(--app-bg);
+  color: var(--app-fg);
   transition: background-color 0.5s ease, color 0.5s ease;
   overflow: hidden;
 }
-
-/* Global Theme Defaults */
-body.dark { background-color: #020617; color: #f8fafc; }
-body:not(.dark) { background-color: #f8fafc; color: #0f172a; }
 
 .mono { font-family: 'JetBrains Mono', monospace; }
 
@@ -28,35 +98,29 @@ body:not(.dark) { background-color: #f8fafc; color: #0f172a; }
 }
 
 /* Adaptive Glass Cards */
-.glass-card {
-  backdrop-filter: blur(12px);
+.glass-card, .sage-glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   transition: background 0.5s ease, border-color 0.5s ease;
-}
-.dark .glass-card {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-body:not(.dark) .glass-card {
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .luxury-shadow {
-  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.15);
-}
-.dark .luxury-shadow {
-  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--luxury-shadow);
 }
 
-.glow-blue {
-  box-shadow: 0 0 30px -5px rgba(59, 130, 246, 0.3);
+.statutory-border {
+  border-left: 4px solid var(--accent-primary);
 }
 
 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.theme-midnight .custom-scrollbar::-webkit-scrollbar-thumb,
+.theme-obsidian .custom-scrollbar::-webkit-scrollbar-thumb,
+.theme-forest .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--accent-primary); }
 
 @keyframes float {
   0% { transform: translateY(0px); }

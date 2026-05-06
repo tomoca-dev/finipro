@@ -270,3 +270,5 @@ export interface ROIMetric {
   value: number;
   target: number;
 }
+
+export type AppTheme = 'light' | 'midnight' | 'obsidian' | 'forest' | 'amber' | 'amethyst' | 'crimson';

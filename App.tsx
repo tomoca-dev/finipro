@@ -23,21 +23,19 @@ import InvestmentEvaluator from './components/InvestmentEvaluator';
 import POSControlRoom from './components/POSControlRoom';
 import IntegrationHub from './components/IntegrationHub';
 import SageModeShell from './components/SageMode/SageModeShell';
-import { FinancialRecord, TransactionType, User, CurrencyCode, UserRole, SystemMode } from './types';
+import { FinancialRecord, TransactionType, User, CurrencyCode, UserRole, SystemMode, AppTheme } from './types';
 import { DEMO_RECORDS } from './constants';
 import { convertRecords } from './services/dataEngine';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
-  const [mockUser, setMockUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isDemoMode, setIsDemoMode] = useState(false);
   const [isTrainingMode, setIsTrainingMode] = useState(() => {
     return localStorage.getItem('finops-training-mode') === 'true';
   });
   const [systemMode, setSystemMode] = useState<SystemMode>('MODERN');
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    return (localStorage.getItem('finops-theme') as 'dark' | 'light') || 'dark';
+  const [theme, setTheme] = useState<AppTheme>(() => {
+    return (localStorage.getItem('finops-theme') as AppTheme) || 'midnight';
   });
   const [targetCurrency, setTargetCurrency] = useState<CurrencyCode>(() => {
     return (localStorage.getItem('finops-currency') as CurrencyCode) || 'ETB';
@@ -54,12 +52,12 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (theme === 'dark') {
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('theme-midnight', 'theme-obsidian', 'theme-forest', 'theme-amber', 'theme-amethyst', 'theme-crimson', 'dark');
+    
+    if (theme !== 'light') {
+      document.body.classList.add(`theme-${theme}`);
       document.documentElement.classList.add('dark');
-      document.body.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.body.classList.remove('dark');
     }
     localStorage.setItem('finops-theme', theme);
   }, [theme]);
@@ -73,7 +71,6 @@ const App: React.FC = () => {
   }, [isTrainingMode]);
 
   const user = useMemo<User | null>(() => {
-    if (mockUser) return mockUser;
     if (!session?.user) return null;
     return {
       id: session.user.id,
@@ -82,26 +79,19 @@ const App: React.FC = () => {
       role: (session.user.user_metadata?.role as any) || 'FINANCE',
       status: 'ACTIVE'
     };
-  }, [session, mockUser]);
+  }, [session]);
 
-  const rawRecords = isTrainingMode ? trainingRecords : (isDemoMode ? DEMO_RECORDS : realRecords);
+  const rawRecords = isTrainingMode ? trainingRecords : realRecords;
   const records = useMemo(() => convertRecords(rawRecords, targetCurrency), [rawRecords, targetCurrency]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setSession(null);
-    setMockUser(null);
-    setIsDemoMode(false);
     setIsTrainingMode(false);
     setActiveTab('dashboard');
   };
 
-  const handleDemoLogin = (role: UserRole, name: string) => {
-    setMockUser({ id: `demo_${role.toLowerCase()}`, name, email: `${role.toLowerCase()}@finops.demo`, role, status: 'ACTIVE' });
-    setActiveTab('dashboard');
-  };
 
-  const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   const toggleSystemMode = () => setSystemMode(prev => prev === 'MODERN' ? 'SAGE' : 'MODERN');
   const toggleTrainingMode = () => setIsTrainingMode(prev => !prev);
 
@@ -115,16 +105,16 @@ const App: React.FC = () => {
     setActiveTab('dashboard');
   };
 
-  if (!user) return <Auth onDemoLogin={handleDemoLogin} />;
+  if (!user) return <Auth />;
 
   if (systemMode === 'SAGE') {
     return (
       <Layout 
         activeTab={activeTab} onTabChange={setActiveTab} user={user}
-        onUserChange={() => {}} isDemoMode={isDemoMode} onToggleDemo={() => setIsDemoMode(!isDemoMode)}
+        onUserChange={() => {}}
         isTrainingMode={isTrainingMode} onToggleTraining={toggleTrainingMode}
         currency={targetCurrency} onCurrencyChange={setTargetCurrency} onLogout={handleLogout}
-        theme={theme} onToggleTheme={toggleTheme}
+        theme={theme} onToggleTheme={(t) => setTheme(t || 'light')}
         systemMode={systemMode} onToggleSystemMode={toggleSystemMode}
       >
         <SageModeShell 
@@ -133,7 +123,7 @@ const App: React.FC = () => {
           systemMode={systemMode}
           onToggleSystemMode={toggleSystemMode}
           theme={theme}
-          onToggleTheme={toggleTheme}
+          onToggleTheme={(t) => setTheme(t || 'light')}
           currency={targetCurrency}
           isTrainingMode={isTrainingMode}
         />
@@ -144,10 +134,10 @@ const App: React.FC = () => {
   return (
     <Layout 
       activeTab={activeTab} onTabChange={setActiveTab} user={user}
-      onUserChange={() => {}} isDemoMode={isDemoMode} onToggleDemo={() => setIsDemoMode(!isDemoMode)}
+      onUserChange={() => {}}
       isTrainingMode={isTrainingMode} onToggleTraining={toggleTrainingMode}
       currency={targetCurrency} onCurrencyChange={setTargetCurrency} onLogout={handleLogout}
-      theme={theme} onToggleTheme={toggleTheme}
+      theme={theme} onToggleTheme={(t) => setTheme(t || 'light')}
       systemMode={systemMode} onToggleSystemMode={toggleSystemMode}
     >
       {activeTab === 'dashboard' && <Dashboard records={records} theme={theme} />}

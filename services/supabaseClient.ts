@@ -10,6 +10,54 @@ export const isSupabaseConfigured = () => {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// --- DEMO AUTH MOCK ---
+// If Supabase isn't configured in the environment, we mock the auth so the demo login works without throwing fetch errors.
+if (!isSupabaseConfigured()) {
+  const mockUser = {
+    id: 'demo-admin-id',
+    app_metadata: {},
+    user_metadata: { full_name: 'Demo Admin', role: 'FINANCE' },
+    aud: 'authenticated',
+    created_at: new Date().toISOString(),
+    email: 'admin@tomoca.com'
+  };
+  
+  const mockSession = {
+    access_token: 'mock-token',
+    refresh_token: 'mock-refresh',
+    expires_in: 3600,
+    expires_at: Math.floor(Date.now() / 1000) + 3600,
+    token_type: 'bearer',
+    user: mockUser
+  };
+
+  supabase.auth.getSession = async () => {
+    const isMockLoggedin = localStorage.getItem('finops_mock_logged_in') === 'true';
+    return { data: { session: isMockLoggedin ? mockSession : null }, error: null } as any;
+  };
+
+  supabase.auth.onAuthStateChange = (callback) => {
+    return { data: { subscription: { id: 'mock', unsubscribe: () => {} } } } as any;
+  };
+
+  supabase.auth.signInWithPassword = async (credentials: any) => {
+    const { email, password } = credentials;
+    if (email === 'admin@tomoca.com' && password === 'password123') {
+      localStorage.setItem('finops_mock_logged_in', 'true');
+      setTimeout(() => window.location.reload(), 500); // Reload to trigger app state update
+      return { data: { user: mockUser, session: mockSession }, error: null } as any;
+    }
+    return { data: { user: null, session: null }, error: { name: 'AuthError', message: 'Invalid demo credentials. Use admin@tomoca.com / password123', status: 400 } } as any;
+  };
+
+  supabase.auth.signOut = async () => {
+    localStorage.removeItem('finops_mock_logged_in');
+    setTimeout(() => window.location.reload(), 100);
+    return { error: null };
+  };
+}
+// ----------------------
+
 /**
  * Local storage fallback for when Supabase is not configured.
  */
