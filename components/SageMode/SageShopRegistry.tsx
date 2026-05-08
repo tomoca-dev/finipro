@@ -10,7 +10,7 @@ import { SageTab } from './SageModeShell';
 
 interface SageShopRegistryProps {
   shops: ShopNode[];
-  onAddShop: (shop: ShopNode) => void;
+  onAddShop: (shop: ShopNode) => void | Promise<void>;
   navigateTo: (tab: SageTab, shopId?: string) => void;
 }
 
@@ -18,6 +18,8 @@ const SageShopRegistry: React.FC<SageShopRegistryProps> = ({ shops, onAddShop, n
   const [searchTerm, setSearchTerm] = useState('');
   const [regionFilter, setRegionFilter] = useState<'ALL' | 'NORTH' | 'CENTRAL' | 'SOUTH'>('ALL');
   const [isProvisioning, setIsProvisioning] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [newShop, setNewShop] = useState<Partial<ShopNode>>({ name: '', region: 'NORTH' });
 
   const filteredShops = useMemo(() => {
@@ -28,19 +30,30 @@ const SageShopRegistry: React.FC<SageShopRegistryProps> = ({ shops, onAddShop, n
     });
   }, [shops, searchTerm, regionFilter]);
 
-  const handleProvision = () => {
+  const handleProvision = async () => {
     if (!newShop.name) return;
+    setIsSaving(true);
+    setSaveError(null);
+
     const node: ShopNode = {
-      id: `NODE-${Math.floor(Math.random() * 1000) + 500}`,
-      name: newShop.name,
+      id: `NODE-${Date.now().toString().slice(-6)}`,
+      name: newShop.name.trim(),
       region: newShop.region as any,
       status: 'AWAITING_FEED',
       createdAt: new Date().toISOString().split('T')[0],
       documents: []
     };
-    onAddShop(node);
-    setIsProvisioning(false);
-    setNewShop({ name: '', region: 'NORTH' });
+
+    try {
+      await onAddShop(node);
+      setIsProvisioning(false);
+      setNewShop({ name: '', region: 'NORTH' });
+    } catch (error: any) {
+      console.error('Unable to provision shop:', error);
+      setSaveError(error?.message || 'Unable to save shop to Supabase.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -202,13 +215,20 @@ const SageShopRegistry: React.FC<SageShopRegistryProps> = ({ shops, onAddShop, n
                  </div>
               </div>
 
+              {saveError && (
+                <div className="mx-12 mb-6 p-4 rounded-2xl border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-300 text-xs font-bold">
+                  {saveError}
+                </div>
+              )}
+
               <div className="p-10 bg-slate-50 dark:bg-black/40 border-t-2 border-slate-100 dark:border-slate-800 flex gap-4">
-                 <button onClick={() => setIsProvisioning(false)} className="flex-1 py-5 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 text-slate-500 rounded-3xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-100 transition-all shadow-sm">Abort</button>
+                 <button disabled={isSaving} onClick={() => setIsProvisioning(false)} className="flex-1 py-5 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 text-slate-500 rounded-3xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-100 transition-all shadow-sm">Abort</button>
                  <button 
                   onClick={handleProvision}
+                  disabled={isSaving}
                   className="flex-[2] py-5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-3xl font-black uppercase text-[10px] tracking-[0.3em] shadow-2xl transition-all flex items-center justify-center gap-3 active:scale-95 shadow-indigo-900/40"
                  >
-                    <Save size={18} /> Seal Shop Node
+                    <Save size={18} /> {isSaving ? 'Saving to Supabase...' : 'Seal Shop Node'}
                  </button>
               </div>
            </div>

@@ -23,7 +23,8 @@ import {
   Users,
   Briefcase,
   Store,
-  PlugZap
+  PlugZap,
+  DatabaseZap
 } from 'lucide-react';
 import { TransactionType, FinancialRecord } from './types';
 
@@ -43,6 +44,7 @@ export const NAVIGATION = [
   { id: 'ingestion', label: 'Data Ingestion', icon: <Upload size={20} />, roles: ['CEO', 'FINANCE'] },
   { id: 'pos-control', label: 'POS Control Room', icon: <Store size={20} />, roles: ['CEO', 'FINANCE', 'MANAGER'] },
   { id: 'integrations', label: 'Integration Hub', icon: <PlugZap size={20} />, roles: ['CEO', 'FINANCE', 'MANAGER'] },
+  { id: 'enterprise-expansion', label: 'ERP Expansion', icon: <DatabaseZap size={20} />, roles: ['CEO', 'FINANCE', 'MANAGER'] },
   { id: 'reports', label: 'P&L Reports', icon: <FileText size={20} />, roles: ['CEO', 'FINANCE', 'DEPT_HEAD', 'MANAGER'] },
   { id: 'analytics', label: 'Analytics', icon: <BarChart3 size={20} />, roles: ['CEO', 'FINANCE', 'DEPT_HEAD', 'MANAGER'] },
   { id: 'budget-builder', label: 'Budget Builder', icon: <Wallet size={20} />, roles: ['CEO', 'FINANCE', 'DEPT_HEAD'] },

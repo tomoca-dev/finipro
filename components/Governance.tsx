@@ -12,7 +12,7 @@ import {
 // Fix: Removed unused Supplier import
 import { AuditLog, AccessRequest, RiskFlag, GovernanceStatus, RiskSeverity } from '../types';
 import { analyzeRiskExposure } from '../services/geminiService';
-import { supabase, logAuditAction } from '../services/supabaseClient';
+import { supabase, logAuditAction, ensureDefaultOrganization, getCurrentUserId } from '../services/supabaseClient';
 
 const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = "" }) => (
   <div className={`glass-card rounded-3xl p-8 transition-all duration-500 luxury-shadow ${className}`}>
@@ -29,10 +29,15 @@ const Governance: React.FC<{ records: any[] }> = ({ records }) => {
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
 
   const fetchData = async () => {
-    const { data: logs } = await supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(40);
-    const { data: requests } = await supabase.from('access_requests').select('*').order('created_at', { ascending: false });
-    if (logs) setAuditLogs(logs);
-    if (requests) setAccessRequests(requests);
+    try {
+      const orgId = await ensureDefaultOrganization();
+      const { data: logs } = await supabase.from('audit_logs').select('*').eq('organization_id', orgId).order('created_at', { ascending: false }).limit(40);
+      const { data: requests } = await supabase.from('compliance_findings').select('*').eq('organization_id', orgId).eq('finding_type', 'ACCESS_REQUEST').order('created_at', { ascending: false });
+      if (logs) setAuditLogs(logs);
+      if (requests) setAccessRequests(requests.map((r: any) => ({ id: r.id, resource: r.evidence?.resource || r.title, reason: r.description || r.remediation_plan || 'Access review required', status: r.status, approver_id: r.evidence?.approver_id, created_at: r.created_at })) as any);
+    } catch (err) {
+      console.warn('Governance data load failed:', err);
+    }
   };
 
   useEffect(() => {
@@ -57,24 +62,18 @@ const Governance: React.FC<{ records: any[] }> = ({ records }) => {
     setRiskFlags(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
     logAuditAction('current-user', `ANOMALY_RESOLVED_${newStatus}`, 'risk_flags', id, { final_status: newStatus });
     
-    await supabase.from('audit_logs').insert([{
-        actor_id: 'current-user',
-        action: `ANOMALY_${newStatus}`,
-        target_table: 'risk_flags',
-        target_id: id,
-        payload: { timestamp: new Date().toISOString() }
-    }]);
+    const orgId = await ensureDefaultOrganization();
+    const userId = await getCurrentUserId();
+    await supabase.from('audit_logs').insert([{ organization_id: orgId, actor_id: userId || 'current-user', action: `ANOMALY_${newStatus}`, target_table: 'risk_flags', target_id: id, payload: { timestamp: new Date().toISOString() } }]);
   };
 
   const handleAccessAction = async (id: string, status: GovernanceStatus) => {
     setIsUpdating(true);
-    const { data } = await supabase.from('access_requests').update({ 
-      status, 
-      approver_id: 'current-user' 
-    }).eq('id', id).select();
-    
+    const orgId = await ensureDefaultOrganization();
+    const userId = await getCurrentUserId();
+    const { data } = await supabase.from('compliance_findings').update({ status, evidence: { approver_id: userId || 'current-user', final_status: status }, closed_at: status === 'APPROVED' || status === 'DENIED' ? new Date().toISOString() : null }).eq('id', id).select();
     if (data) {
-      logAuditAction('current-user', `AUTH_${status}`, 'access_requests', id, { final_status: status });
+      logAuditAction(userId || 'current-user', `AUTH_${status}`, 'compliance_findings', id, { final_status: status }, orgId);
       await fetchData();
     }
     setIsUpdating(false);

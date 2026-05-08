@@ -22,6 +22,7 @@ import HiringForecaster from './components/HiringForecaster';
 import InvestmentEvaluator from './components/InvestmentEvaluator';
 import POSControlRoom from './components/POSControlRoom';
 import IntegrationHub from './components/IntegrationHub';
+import EnterpriseExpansionCenter from './components/EnterpriseExpansionCenter';
 import SageModeShell from './components/SageMode/SageModeShell';
 import { FinancialRecord, TransactionType, User, CurrencyCode, UserRole, SystemMode, AppTheme } from './types';
 import { DEMO_RECORDS } from './constants';
@@ -158,6 +159,7 @@ const App: React.FC = () => {
       {activeTab === 'admin' && <Admin />}
       {activeTab === 'pos-control' && <POSControlRoom records={records} currency={targetCurrency} />}
       {activeTab === 'integrations' && <IntegrationHub currency={targetCurrency} />}
+      {activeTab === 'enterprise-expansion' && <EnterpriseExpansionCenter />}
     </Layout>
   );
 };

@@ -1,65 +1,27 @@
-
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'placeholder-key';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 
 export const isSupabaseConfigured = () => {
-  return supabaseUrl !== 'https://placeholder.supabase.co' && supabaseAnonKey !== 'placeholder-key';
+  return Boolean(supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('placeholder'));
 };
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// --- DEMO AUTH MOCK ---
-// If Supabase isn't configured in the environment, we mock the auth so the demo login works without throwing fetch errors.
-if (!isSupabaseConfigured()) {
-  const mockUser = {
-    id: 'demo-admin-id',
-    app_metadata: {},
-    user_metadata: { full_name: 'Demo Admin', role: 'FINANCE' },
-    aud: 'authenticated',
-    created_at: new Date().toISOString(),
-    email: 'admin@tomoca.com'
-  };
-  
-  const mockSession = {
-    access_token: 'mock-token',
-    refresh_token: 'mock-refresh',
-    expires_in: 3600,
-    expires_at: Math.floor(Date.now() / 1000) + 3600,
-    token_type: 'bearer',
-    user: mockUser
-  };
-
-  supabase.auth.getSession = async () => {
-    const isMockLoggedin = localStorage.getItem('finops_mock_logged_in') === 'true';
-    return { data: { session: isMockLoggedin ? mockSession : null }, error: null } as any;
-  };
-
-  supabase.auth.onAuthStateChange = (callback) => {
-    return { data: { subscription: { id: 'mock', unsubscribe: () => {} } } } as any;
-  };
-
-  supabase.auth.signInWithPassword = async (credentials: any) => {
-    const { email, password } = credentials;
-    if (email === 'admin@tomoca.com' && password === 'password123') {
-      localStorage.setItem('finops_mock_logged_in', 'true');
-      setTimeout(() => window.location.reload(), 500); // Reload to trigger app state update
-      return { data: { user: mockUser, session: mockSession }, error: null } as any;
-    }
-    return { data: { user: null, session: null }, error: { name: 'AuthError', message: 'Invalid demo credentials. Use admin@tomoca.com / password123', status: 400 } } as any;
-  };
-
-  supabase.auth.signOut = async () => {
-    localStorage.removeItem('finops_mock_logged_in');
-    setTimeout(() => window.location.reload(), 100);
-    return { error: null };
-  };
-}
-// ----------------------
+export const supabase = createClient(
+  supabaseUrl || 'https://invalid.supabase.co',
+  supabaseAnonKey || 'invalid-anon-key',
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  }
+);
 
 /**
- * Local storage fallback for when Supabase is not configured.
+ * Local storage utility retained only for non-critical UI drafts and graceful reads in legacy components.
+ * Authentication never falls back to mock/demo mode.
  */
 export const localDb = {
   get: (key: string) => JSON.parse(localStorage.getItem(`finops_${key}`) || '[]'),
@@ -83,14 +45,47 @@ export const localDb = {
   }
 };
 
+
+
+export const getCurrentUserId = async (): Promise<string | null> => {
+  const { data } = await supabase.auth.getUser();
+  return data.user?.id ?? null;
+};
+
+export const ensureDefaultOrganization = async (orgName = 'Default Organization'): Promise<string> => {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  if (!userData.user) throw new Error('Not authenticated');
+
+  const { data: memberships, error: membershipError } = await supabase
+    .from('organization_members')
+    .select('organization_id')
+    .limit(1);
+
+  if (membershipError) throw membershipError;
+  if (memberships && memberships.length > 0 && memberships[0].organization_id) {
+    return memberships[0].organization_id as string;
+  }
+
+  const { data: createdOrgId, error: createError } = await supabase.rpc('create_organization', {
+    org_name: orgName,
+  });
+
+  if (createError) throw createError;
+  if (!createdOrgId) throw new Error('Unable to create organization');
+  return createdOrgId as string;
+};
+
 export const logAuditAction = async (
-  actorId: string, 
-  action: string, 
-  targetTable: string, 
-  targetId: string, 
-  payload: any
+  actorId: string,
+  action: string,
+  targetTable: string,
+  targetId: string,
+  payload: any,
+  organizationId?: string | null
 ) => {
   const log = {
+    organization_id: organizationId ?? payload?.organization_id ?? null,
     actor_id: actorId,
     action,
     target_table: targetTable,
@@ -100,13 +95,13 @@ export const logAuditAction = async (
   };
 
   if (isSupabaseConfigured()) {
-    try {
-      await supabase.from('audit_logs').insert([log]);
-    } catch (e) {
-      console.warn('Supabase log failed, falling back to local');
+    const { error } = await supabase.from('audit_logs').insert([log]);
+    if (error) {
+      console.warn('Supabase audit log failed:', error.message);
       localDb.insert('audit_logs', [log]);
     }
   } else {
+    console.warn('Supabase is not configured. Audit log saved locally only.');
     localDb.insert('audit_logs', [log]);
   }
 };

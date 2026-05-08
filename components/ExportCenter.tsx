@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { generateExecutiveSummary } from '../services/geminiService';
 import { ExportTemplate, Report, SecureShareLink, UserRole } from '../types';
-import { supabase } from '../services/supabaseClient';
+import { supabase, ensureDefaultOrganization, getCurrentUserId } from '../services/supabaseClient';
 
 const TEMPLATES: ExportTemplate[] = [
   { id: '1', name: 'Standard Board Pack', type: 'PPTX', description: 'Monthly performance deck for the leadership board.' },
@@ -30,14 +30,19 @@ const ExportCenter: React.FC<{ records: any[] }> = ({ records }) => {
 
   const fetchData = async () => {
     setIsLoadingData(true);
-    const [reportsRes, linksRes] = await Promise.all([
-      supabase.from('reports').select('*').order('created_at', { ascending: false }),
-      supabase.from('share_links').select('*').order('created_at', { ascending: false })
-    ]);
-    
-    if (reportsRes.data) setReports(reportsRes.data);
-    if (linksRes.data) setShareLinks(linksRes.data);
-    setIsLoadingData(false);
+    try {
+      const orgId = await ensureDefaultOrganization();
+      const [reportsRes, linksRes] = await Promise.all([
+        supabase.from('reports').select('*').eq('organization_id', orgId).order('created_at', { ascending: false }),
+        supabase.from('export_jobs').select('*').eq('organization_id', orgId).eq('export_type', 'SECURE_SHARE').order('requested_at', { ascending: false })
+      ]);
+      if (reportsRes.data) setReports(reportsRes.data.map((r: any) => ({ id: r.id, name: r.report_name || r.name, type: r.report_type || r.type, owner_id: r.created_by || r.owner_id || 'system', file_path: r.result_payload?.file_path || r.file_path || '', metadata: r.result_payload || r.metadata || {}, created_at: r.created_at })) as any);
+      if (linksRes.data) setShareLinks(linksRes.data.map((job: any) => ({ id: job.id, report_id: job.filters?.report_id, token: job.filters?.token, expires_at: job.filters?.expires_at, role_required: job.filters?.role_required || 'DEPT_HEAD', url: job.file_url || job.filters?.url, created_at: job.requested_at })) as any);
+    } catch (err) {
+      console.warn('Export data load failed:', err);
+    } finally {
+      setIsLoadingData(false);
+    }
   };
 
   const generatePack = async () => {
@@ -48,16 +53,13 @@ const ExportCenter: React.FC<{ records: any[] }> = ({ records }) => {
       const result = await generateExecutiveSummary({ count: records.length, health: 78 });
       setSummary(result);
       
-      const newReport: Partial<Report> = {
-        name: template?.name || 'New Report',
-        type: template?.type || 'PDF',
-        owner_id: 'current-user',
-        file_path: `/reports/${Date.now()}.${template?.type.toLowerCase()}`,
-        metadata: { ai_summary: result.substring(0, 100) }
-      };
-      
-      const { data } = await supabase.from('reports').insert([newReport]).select();
-      if (data) setReports(prev => [data[0], ...prev]);
+      const orgId = await ensureDefaultOrganization();
+      const userId = await getCurrentUserId();
+      const filePath = `/reports/${Date.now()}.${template?.type.toLowerCase()}`;
+      const newReport = { organization_id: orgId, report_name: template?.name || 'New Report', report_type: template?.type || 'PDF', status: 'COMPLETED', parameters: { template_id: activeTemplate }, result_payload: { ai_summary: result.substring(0, 100), file_path: filePath }, created_by: userId };
+      const { data, error } = await supabase.from('reports').insert([newReport]).select();
+      if (error) throw error;
+      if (data) setReports(prev => [{ id: data[0].id, name: data[0].report_name, type: data[0].report_type, owner_id: data[0].created_by || 'system', file_path: data[0].result_payload?.file_path || filePath, metadata: data[0].result_payload, created_at: data[0].created_at } as any, ...prev]);
       
     } catch (err) {
       console.error("Report generation failed", err);
@@ -71,16 +73,12 @@ const ExportCenter: React.FC<{ records: any[] }> = ({ records }) => {
     if (!report) return;
 
     const token = Math.random().toString(36).substr(2, 12);
-    const newLink: Partial<SecureShareLink> = {
-      report_id: reportId,
-      token,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      role_required: role,
-      url: `https://finops.pro/secure/${token}`
-    };
-
-    const { data } = await supabase.from('share_links').insert([newLink]).select();
-    if (data) setShareLinks(prev => [data[0], ...prev]);
+    const orgId = await ensureDefaultOrganization();
+    const userId = await getCurrentUserId();
+    const newLink: Partial<SecureShareLink> = { report_id: reportId, token, expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), role_required: role, url: `https://finops.pro/secure/${token}` };
+    const { data, error } = await supabase.from('export_jobs').insert([{ organization_id: orgId, export_type: 'SECURE_SHARE', format: 'LINK', status: 'COMPLETED', requested_by: userId, file_url: newLink.url, filters: newLink, result: { report_name: report.name }, completed_at: new Date().toISOString() }]).select();
+    if (error) throw error;
+    if (data) setShareLinks(prev => [{ ...newLink, id: data[0].id, created_at: data[0].requested_at } as SecureShareLink, ...prev]);
   };
 
   const deleteReport = async (id: string) => {

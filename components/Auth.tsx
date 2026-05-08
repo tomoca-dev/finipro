@@ -15,17 +15,6 @@ const Auth: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const handleDemoLogin = async () => {
-    setLoading(true);
-    setError(null);
-    setMessage(null);
-    setEmail('admin@tomoca.com');
-    setPassword('password123');
-    const { error } = await supabase.auth.signInWithPassword({ email: 'admin@tomoca.com', password: 'password123' });
-    if (error) setError(error.message);
-    setLoading(false);
-  };
-
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -230,27 +219,6 @@ const Auth: React.FC = () => {
                 className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-500 transition-colors"
               >
                 {mode === 'login' ? "Require an account? Provision here" : "Return to authorized login"}
-              </button>
-
-              <button 
-                type="button"
-                onClick={handleDemoLogin}
-                className="mt-6 p-4 rounded-2xl bg-white/5 border border-white/5 w-full text-left hover:bg-white/10 transition-all cursor-pointer group block"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-white transition-colors">Institutional Demo Access</p>
-                  <ChevronRight size={14} className="text-slate-500 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between items-center text-[10px] font-bold">
-                    <span className="text-slate-500">EMAIL</span>
-                    <span className="text-blue-400">admin@tomoca.com</span>
-                  </div>
-                  <div className="flex justify-between items-center text-[10px] font-bold">
-                    <span className="text-slate-500">KEY</span>
-                    <span className="text-blue-400">password123</span>
-                  </div>
-                </div>
               </button>
             </div>
 

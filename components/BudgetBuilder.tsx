@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase, logAuditAction } from '../services/supabaseClient';
+import { supabase, logAuditAction, ensureDefaultOrganization } from '../services/supabaseClient';
 import { 
   Plus, Trash2, Send, CheckCircle, Zap, ChevronRight, Lock, 
   Unlock, TrendingUp, MessageSquareQuote, Loader2, History,
@@ -20,6 +20,8 @@ const BudgetBuilder: React.FC = () => {
   const [isNegotiating, setIsNegotiating] = useState(false);
   const [activeNegotiation, setActiveNegotiation] = useState<any>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [budgetId, setBudgetId] = useState<string | null>(null);
 
   const [isAddingDept, setIsAddingDept] = useState(false);
   const [newDeptName, setNewDeptName] = useState('');
@@ -28,23 +30,59 @@ const BudgetBuilder: React.FC = () => {
 
   const fetchData = async () => {
     setIsLoading(true);
-    const [budRes, itemRes, negRes, deptRes] = await Promise.all([
-      supabase.from('budgets').select('*'),
-      supabase.from('budget_line_items').select('*'),
-      supabase.from('negotiations').select('*').order('created_at', { ascending: false }),
-      supabase.from('departments').select('name')
-    ]);
-    
-    if (budRes.data) setBudgets(budRes.data);
-    if (itemRes.data) setLineItems(itemRes.data);
-    if (negRes.data) setNegotiationHistory(negRes.data);
-    
-    if (deptRes.data && deptRes.data.length > 0) {
-      const names = deptRes.data.map((d: any) => d.name);
-      setAvailableDepts(Array.from(new Set([...MOCK_DEPARTMENTS, ...names])));
+    try {
+      const orgId = await ensureDefaultOrganization();
+      setOrganizationId(orgId);
+      const [budRes, itemRes, insightRes, deptRes] = await Promise.all([
+        supabase.from('budgets').select('*').eq('organization_id', orgId),
+        supabase.from('budget_line_items').select('*').eq('organization_id', orgId),
+        supabase.from('ai_insights').select('*').eq('organization_id', orgId).eq('insight_type', 'BUDGET_NEGOTIATION').order('created_at', { ascending: false }),
+        supabase.from('departments').select('id,name,code').eq('organization_id', orgId)
+      ]);
+      if (budRes.data) {
+        const mapped = budRes.data.map((b: any) => ({
+          id: b.id,
+          department: b.budget_name || b.metadata?.department || 'General',
+          envelope: Number(b.total_budget || 0),
+          allocated: Number(b.total_actual || 0),
+          status: b.status || 'DRAFT',
+          efficiencyScore: Number(b.metadata?.efficiencyScore || 85),
+        }));
+        setBudgets(mapped as any);
+        setBudgetId(budRes.data[0]?.id ?? null);
+      }
+      if (itemRes.data) {
+        setLineItems(itemRes.data.map((item: any) => ({
+          id: item.id,
+          category: item.category || 'OPEX',
+          subCategory: item.description || 'Budget Line',
+          amount: Number(item.planned_amount ?? item.actual_amount ?? 0),
+          roiTarget: Number(item.metadata?.roiTarget ?? 1),
+          department: item.metadata?.department || selectedDept,
+          status: item.metadata?.status || 'DRAFT',
+        })) as any);
+      }
+      if (insightRes.data) {
+        setNegotiationHistory(insightRes.data.map((row: any) => ({
+          id: row.id,
+          budget_id: row.source_id || row.id,
+          department: row.evidence?.department || 'General',
+          input_snapshot: row.evidence?.input_snapshot || {},
+          ai_output: row.evidence?.ai_output || { summary: row.summary },
+          created_by: row.created_by || 'AI',
+          created_at: row.created_at,
+          accepted_flag: row.status === 'APPROVED',
+        })) as any);
+      }
+      if (deptRes.data && deptRes.data.length > 0) {
+        const names = deptRes.data.map((d: any) => d.name);
+        setAvailableDepts(Array.from(new Set([...MOCK_DEPARTMENTS, ...names])));
+      }
+    } catch (err) {
+      console.warn('Budget data load failed:', err);
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -65,10 +103,31 @@ const BudgetBuilder: React.FC = () => {
   const handleUpdateLine = async (id: string, field: keyof BudgetLineItem, value: any) => {
     const updatedItems = lineItems.map(item => item.id === id ? { ...item, [field]: value } : item);
     setLineItems(updatedItems);
-    await supabase.from('budget_line_items').update({ [field]: value }).eq('id', id);
+    const updates: any = {};
+    if (field === 'subCategory') updates.description = value;
+    else if (field === 'amount') updates.planned_amount = Number(value);
+    else if (field === 'category') updates.category = value;
+    else updates.metadata = { [field]: value };
+    await supabase.from('budget_line_items').update(updates).eq('id', id);
   };
 
   const handleAddLine = async () => {
+    const orgId = organizationId || await ensureDefaultOrganization();
+    let activeBudgetId = budgetId;
+    if (!activeBudgetId) {
+      const { data: createdBudget, error: budgetError } = await supabase.from('budgets').insert([{
+        organization_id: orgId,
+        budget_name: selectedDept,
+        fiscal_year: new Date().getFullYear(),
+        total_budget: 150000,
+        total_actual: 0,
+        status: 'DRAFT',
+        metadata: { department: selectedDept, efficiencyScore: 85 },
+      }]).select('*').single();
+      if (budgetError) throw budgetError;
+      activeBudgetId = createdBudget.id;
+      setBudgetId(activeBudgetId);
+    }
     const newItem = {
       id: Math.random().toString(36).substr(2, 9),
       category: 'OPEX',
@@ -78,10 +137,18 @@ const BudgetBuilder: React.FC = () => {
       department: selectedDept,
       status: 'DRAFT'
     };
-    
-    setLineItems([...lineItems, newItem]);
-    await supabase.from('budget_line_items').insert([newItem]);
-    logAuditAction('current-user', 'ADD_LINE_ITEM', 'budget_line_items', newItem.id, newItem);
+    const { data, error } = await supabase.from('budget_line_items').insert([{
+      organization_id: orgId,
+      budget_id: activeBudgetId,
+      category: newItem.category,
+      description: newItem.subCategory,
+      planned_amount: newItem.amount,
+      actual_amount: 0,
+      metadata: { department: selectedDept, roiTarget: newItem.roiTarget, status: newItem.status },
+    }]).select('*').single();
+    if (error) throw error;
+    setLineItems([...lineItems, { ...newItem, id: data.id }]);
+    logAuditAction('current-user', 'ADD_LINE_ITEM', 'budget_line_items', data.id, newItem, orgId);
   };
 
   const handleNegotiate = async () => {
@@ -102,8 +169,22 @@ const BudgetBuilder: React.FC = () => {
       created_by: 'current-user',
       accepted_flag: false
     };
-    const { data } = await supabase.from('negotiations').insert([newNeg]).select();
-    if (data) setNegotiationHistory([data[0], ...negotiationHistory]);
+    const orgId = organizationId || await ensureDefaultOrganization();
+    const { data } = await supabase.from('ai_insights').insert([{
+      organization_id: orgId,
+      insight_type: 'BUDGET_NEGOTIATION',
+      title: `Budget negotiation - ${selectedDept}`,
+      summary: result?.summary || result?.rationale || 'AI budget negotiation generated.',
+      severity: 'MEDIUM',
+      confidence: result?.confidence || 75,
+      status: 'ACTIVE',
+      source_table: 'budgets',
+      source_id: currentBudget.department,
+      recommendation: result?.recommendation || result?.rationale || null,
+      evidence: { department: selectedDept, input_snapshot: newNeg.input_snapshot, ai_output: result },
+      created_by: 'AI'
+    }]).select();
+    if (data) setNegotiationHistory([{ ...(newNeg as Negotiation), id: data[0].id, created_at: data[0].created_at }, ...negotiationHistory]);
   };
 
   return (

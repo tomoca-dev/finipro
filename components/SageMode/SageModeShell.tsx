@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   BookOpen, Users, Calculator, PieChart, Database, 
   ArrowRight, Settings, FileText, 
@@ -7,7 +7,7 @@ import {
   Truck, Landmark, History, ShieldCheck, ClipboardCheck,
   Download, Lock, Save, Activity, RefreshCw,
   Monitor, Globe, Zap, MessageSquare, Cpu, ShieldAlert, Sparkles, GraduationCap,
-  Store, Package
+  Store, Package, DatabaseZap
 } from 'lucide-react';
 import SageGLCenter from './SageGLCenter';
 import SageReports from './SageReports';
@@ -28,10 +28,12 @@ import SageSecurityVault from './SageSecurityVault';
 import SageShopRegistry from './SageShopRegistry';
 import SageShopProfile from './SageShopProfile';
 import SageCoreEngine from './SageCoreEngine';
+import EnterpriseExpansionCenter from '../EnterpriseExpansionCenter';
 import { User, FinancialRecord, SystemMode, CurrencyCode, ShopNode, AppTheme } from '../../types';
+import { supabase, isSupabaseConfigured } from '../../services/supabaseClient';
 import { CURRENCY_SYMBOLS } from '../../services/dataEngine';
 
-export type SageTab = 'CUSTOMERS' | 'VENDORS' | 'INVENTORY' | 'PAYROLL' | 'BANKING' | 'GL' | 'REPORTS' | 'AUDIT' | 'BATCHES' | 'CONFIG' | 'CONNECTORS' | 'INSIGHTS' | 'CONSOLIDATION' | 'AUTOMATION' | 'PREDICTIVE' | 'SECURITY' | 'CORE_ENGINE' | 'MAINTAIN_ACCOUNTS' | 'BACKUP' | 'SHOPS' | 'SHOP_PROFILE';
+export type SageTab = 'CUSTOMERS' | 'VENDORS' | 'INVENTORY' | 'PAYROLL' | 'BANKING' | 'GL' | 'REPORTS' | 'AUDIT' | 'BATCHES' | 'CONFIG' | 'CONNECTORS' | 'INSIGHTS' | 'CONSOLIDATION' | 'AUTOMATION' | 'PREDICTIVE' | 'SECURITY' | 'CORE_ENGINE' | 'ERP_EXPANSION' | 'MAINTAIN_ACCOUNTS' | 'BACKUP' | 'SHOPS' | 'SHOP_PROFILE';
 
 interface SageModeShellProps {
   user: User;
@@ -50,11 +52,73 @@ const SageModeShell: React.FC<SageModeShellProps> = ({
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<SageTab>('SHOPS'); 
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
-  
-  // INITIAL DATA RESET: Shops initialized to empty array
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [shops, setShops] = useState<ShopNode[]>([]);
+  const [shopLoadError, setShopLoadError] = useState<string | null>(null);
+  const [isLoadingShops, setIsLoadingShops] = useState(false);
 
   const currencySymbol = CURRENCY_SYMBOLS[currency] || '$';
+
+  const mapDbShopToNode = (row: any): ShopNode => ({
+    id: row.shop_code || row.id,
+    name: row.shop_name || row.name || 'Unnamed Shop',
+    region: (row.region || 'NORTH') as ShopNode['region'],
+    status: row.status === 'ACTIVE' ? 'ACTIVE' : row.status === 'INACTIVE' ? 'LOCKED' : 'AWAITING_FEED',
+    createdAt: (row.created_at || new Date().toISOString()).split('T')[0],
+    documents: []
+  });
+
+  const ensureOrganization = async (): Promise<string> => {
+    const { data: memberships, error: membershipError } = await supabase
+      .from('organization_members')
+      .select('organization_id')
+      .limit(1);
+
+    if (membershipError) throw membershipError;
+    if (memberships && memberships.length > 0) return memberships[0].organization_id;
+
+    const { data: createdOrgId, error: createError } = await supabase.rpc('create_organization', {
+      org_name: 'Default Organization'
+    });
+
+    if (createError) throw createError;
+    return createdOrgId as string;
+  };
+
+  const loadShops = async () => {
+    if (!isSupabaseConfigured()) {
+      setShopLoadError('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+      setShops([]);
+      return;
+    }
+
+    setIsLoadingShops(true);
+    setShopLoadError(null);
+
+    try {
+      const orgId = await ensureOrganization();
+      setOrganizationId(orgId);
+
+      const { data, error } = await supabase
+        .from('sage_shops')
+        .select('*')
+        .eq('organization_id', orgId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setShops((data || []).map(mapDbShopToNode));
+    } catch (error: any) {
+      console.error('Unable to load Sage shops:', error);
+      setShopLoadError(error?.message || 'Unable to load Sage shop registry. Check that Sage supplemental SQL has been run.');
+      setShops([]);
+    } finally {
+      setIsLoadingShops(false);
+    }
+  };
+
+  useEffect(() => {
+    loadShops();
+  }, [user.id]);
 
   const navigateTo = (tab: SageTab, shopId?: string) => {
     if (shopId) setSelectedShopId(shopId);
@@ -65,8 +129,28 @@ const SageModeShell: React.FC<SageModeShellProps> = ({
     setShops(prev => prev.map(s => s.id === updatedShop.id ? updatedShop : s));
   };
 
-  const handleAddShop = (newShop: ShopNode) => {
-    setShops(prev => [newShop, ...prev]);
+  const handleAddShop = async (newShop: ShopNode) => {
+    if (!organizationId) {
+      throw new Error('No organization is available. Create or load an organization first.');
+    }
+
+    const dbStatus = newShop.status === 'ACTIVE' ? 'ACTIVE' : newShop.status === 'LOCKED' ? 'INACTIVE' : 'PENDING';
+
+    const { data, error } = await supabase
+      .from('sage_shops')
+      .insert([{
+        organization_id: organizationId,
+        shop_code: newShop.id,
+        shop_name: newShop.name,
+        region: newShop.region,
+        status: dbStatus,
+        metadata: { source: 'sage_shop_registry_ui' }
+      }])
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    setShops(prev => [mapDbShopToNode(data), ...prev]);
   };
 
   const navigationGroups = [
@@ -87,6 +171,7 @@ const SageModeShell: React.FC<SageModeShellProps> = ({
         { id: 'BATCHES', label: 'Verification Queue', icon: <ClipboardCheck size={16} /> },
         { id: 'GL', label: 'General Ledger', icon: <Layers size={16} /> },
         { id: 'CORE_ENGINE', label: 'Financial Core', icon: <BookOpen size={16} /> },
+        { id: 'ERP_EXPANSION', label: 'ERP Expansion', icon: <DatabaseZap size={16} /> },
         { id: 'CUSTOMERS', label: 'Customers & A/R', icon: <Users size={16} /> },
         { id: 'VENDORS', label: 'Vendors & A/P', icon: <Truck size={16} /> },
         { id: 'INVENTORY', label: 'Inventory & Stock', icon: <ShoppingBag size={16} /> },
@@ -178,8 +263,19 @@ const SageModeShell: React.FC<SageModeShellProps> = ({
         </aside>
 
         <main className="flex-1 bg-white dark:bg-[#0b0f1a] overflow-y-auto custom-scrollbar">
+          {shopLoadError && (
+            <div className="m-6 p-4 rounded-2xl border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-300 text-xs font-bold">
+              Sage Shop Registry database error: {shopLoadError}
+            </div>
+          )}
+          {isLoadingShops && (
+            <div className="m-6 p-4 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 text-xs font-bold">
+              Loading Sage shop registry from Supabase...
+            </div>
+          )}
           {activeSubTab === 'GL' && <SageGLCenter user={user} onPost={onIngest} navigateTo={navigateTo} currency={currency} shops={shops} />}
           {activeSubTab === 'CORE_ENGINE' && <SageCoreEngine user={user} shops={shops} />}
+          {activeSubTab === 'ERP_EXPANSION' && <EnterpriseExpansionCenter embedded />}
           {activeSubTab === 'REPORTS' && <SageReports />}
           {activeSubTab === 'AUDIT' && <SageAuditTrail />}
           {activeSubTab === 'BATCHES' && <SageBatchManager user={user} currency={currency} navigateTo={navigateTo} shops={shops} />}

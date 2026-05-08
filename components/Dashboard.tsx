@@ -12,7 +12,7 @@ import {
 import { FinancialRecord, KPIStats, CurrencyCode, CEOTarget } from '../types';
 import { getAggregates, calculateHealthIndex, getRankedDrivers, getRankedKillers, CURRENCY_SYMBOLS, EXCHANGE_RATES } from '../services/dataEngine';
 import { generateCFOBrief } from '../services/geminiService';
-import { supabase } from '../services/supabaseClient';
+import { supabase, ensureDefaultOrganization } from '../services/supabaseClient';
 import GlobeSalesMap from './GlobeSalesMap';
 import AudioBrief from './AudioBrief';
 
@@ -69,16 +69,50 @@ const Dashboard: React.FC<{ records: FinancialRecord[]; theme: 'dark' | 'light' 
 
   useEffect(() => {
     const fetchTargets = async () => {
-      const { data } = await supabase.from('ceo_targets').select('*').order('effective_from', { ascending: false }).limit(1);
-      if (data && data[0]) setTargets(data[0]);
+      try {
+        const orgId = await ensureDefaultOrganization();
+        const { data, error } = await supabase
+          .from('ceo_targets')
+          .select('*')
+          .eq('organization_id', orgId)
+          .order('created_at', { ascending: false })
+          .limit(3);
+        if (error) throw error;
+        if (data && data.length > 0) {
+          const revenue = data.find((row: any) => row.target_name === 'Revenue Target');
+          const ebitda = data.find((row: any) => row.target_name === 'EBITDA Target');
+          const runway = data.find((row: any) => row.target_name === 'Runway Target');
+          setTargets({
+            fiscal_year: new Date().getFullYear(),
+            revenue_target: Number(revenue?.target_value ?? targets.revenue_target),
+            ebitda_target_pct: Number(ebitda?.target_value ?? targets.ebitda_target_pct),
+            runway_months: Number(runway?.target_value ?? targets.runway_months),
+            effective_from: revenue?.created_at ?? new Date().toISOString(),
+          });
+        }
+      } catch (err) {
+        console.warn('CEO target load failed:', err);
+      }
     };
     fetchTargets();
   }, []);
 
   const handleSaveTargets = async () => {
     setIsSavingTargets(true);
-    await supabase.from('ceo_targets').insert([targets]);
-    setIsSavingTargets(false);
+    try {
+      const orgId = await ensureDefaultOrganization();
+      const rows = [
+        { organization_id: orgId, target_name: 'Revenue Target', target_category: 'FINANCIAL', target_value: targets.revenue_target, current_value: 0, unit: currentCurrency, period_start: `${targets.fiscal_year}-01-01`, period_end: `${targets.fiscal_year}-12-31`, priority: 'HIGH', status: 'ACTIVE', metadata: { source: 'ceo_dashboard', metric: 'revenue_target' } },
+        { organization_id: orgId, target_name: 'EBITDA Target', target_category: 'FINANCIAL', target_value: targets.ebitda_target_pct, current_value: 0, unit: 'percent', period_start: `${targets.fiscal_year}-01-01`, period_end: `${targets.fiscal_year}-12-31`, priority: 'HIGH', status: 'ACTIVE', metadata: { source: 'ceo_dashboard', metric: 'ebitda_target_pct' } },
+        { organization_id: orgId, target_name: 'Runway Target', target_category: 'LIQUIDITY', target_value: targets.runway_months, current_value: 0, unit: 'months', period_start: `${targets.fiscal_year}-01-01`, period_end: `${targets.fiscal_year}-12-31`, priority: 'MEDIUM', status: 'ACTIVE', metadata: { source: 'ceo_dashboard', metric: 'runway_months' } },
+      ];
+      const { error } = await supabase.from('ceo_targets').insert(rows);
+      if (error) throw error;
+    } catch (err) {
+      console.error('CEO target save failed:', err);
+    } finally {
+      setIsSavingTargets(false);
+    }
   };
   
   const currentCurrency = (records[0]?.currency as CurrencyCode) || 'USD';
