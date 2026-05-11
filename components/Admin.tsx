@@ -15,15 +15,34 @@ import { supabase } from '../services/supabaseClient';
 
 const Admin: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'USERS' | 'DEPTS' | 'HEALTH' | 'TEMPLATES'>('USERS');
+  const [isCreating, setIsCreating] = useState(false);
+  const [users, setUsers] = useState<User[]>([
+    { id: '1', name: 'Alex Chen', email: 'alex@finops.pro', role: 'CEO', status: 'ACTIVE' },
+    { id: '2', name: 'Sarah Miller', email: 'sarah@finops.pro', role: 'FINANCE', status: 'ACTIVE' },
+    { id: '3', name: 'B Tesfaye', email: 'btesfaye236@gmail.com', role: 'ADMIN', status: 'ACTIVE' },
+  ]);
+  
+  const [newUserInfo, setNewUserInfo] = useState({ name: '', email: '', password: '', role: 'FINANCE' as UserRole });
+
   const [jobs, setJobs] = useState<SystemJob[]>([
     { id: 'job-421', type: 'INGESTION', status: 'RUNNING', throughput: 142, errorRate: 0.1, startedAt: new Date().toISOString() },
     { id: 'job-420', type: 'SYNC', status: 'COMPLETED', throughput: 880, errorRate: 0, startedAt: new Date(Date.now() - 3600000).toISOString() },
   ]);
 
-  const users: User[] = [
-    { id: '1', name: 'Alex Chen', email: 'alex@finops.pro', role: 'CEO', status: 'ACTIVE' },
-    { id: '2', name: 'Sarah Miller', email: 'sarah@finops.pro', role: 'FINANCE', status: 'ACTIVE' },
-  ];
+  const handleCreateUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newUser: User = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: newUserInfo.name,
+      email: newUserInfo.email,
+      role: newUserInfo.role,
+      status: 'ACTIVE'
+    };
+    setUsers([newUser, ...users]);
+    setIsCreating(false);
+    setNewUserInfo({ name: '', email: '', password: '', role: 'FINANCE' });
+    alert(`User ${newUser.name} created successfully as ${newUser.role}`);
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 max-w-[1600px] mx-auto">
@@ -44,7 +63,107 @@ const Admin: React.FC = () => {
             </button>
           ))}
         </div>
+
+        {activeTab === 'USERS' && (
+          <button 
+            onClick={() => setIsCreating(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+          >
+            <UserPlus size={16} /> Provision Node
+          </button>
+        )}
       </div>
+
+      {isCreating && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[40px] p-10 w-full max-w-lg luxury-shadow relative overflow-hidden">
+             <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-600 to-indigo-600"></div>
+             
+             <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Provision Identity Node</h3>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-1">Authorized Root Creation</p>
+                </div>
+                <button onClick={() => setIsCreating(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors">
+                  <XCircle size={20} className="text-slate-400" />
+                </button>
+             </div>
+
+             <form onSubmit={handleCreateUser} className="space-y-6">
+                <div className="grid grid-cols-1 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Legal Identity Name</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={newUserInfo.name}
+                      onChange={e => setNewUserInfo({...newUserInfo, name: e.target.value})}
+                      className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500/50 outline-none transition-all dark:text-white"
+                      placeholder="Enter full name"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Network Email</label>
+                    <input 
+                      type="email" 
+                      required
+                      value={newUserInfo.email}
+                      onChange={e => setNewUserInfo({...newUserInfo, email: e.target.value})}
+                      className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500/50 outline-none transition-all dark:text-white"
+                      placeholder="name@finops.pro"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Security Key</label>
+                      <input 
+                        type="password" 
+                        required
+                        value={newUserInfo.password}
+                        onChange={e => setNewUserInfo({...newUserInfo, password: e.target.value})}
+                        className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500/50 outline-none transition-all dark:text-white"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Role Matrix</label>
+                      <select 
+                        value={newUserInfo.role}
+                        onChange={e => setNewUserInfo({...newUserInfo, role: e.target.value as UserRole})}
+                        className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500/50 outline-none transition-all dark:text-white appearance-none"
+                      >
+                        <option value="CEO">CEO</option>
+                        <option value="ACCOUNTANT">Accountant</option>
+                        <option value="FINANCE">Finance</option>
+                        <option value="ADMIN">Admin</option>
+                        <option value="MANAGER">Manager</option>
+                        <option value="STAFF">Staff</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 flex gap-4">
+                  <button 
+                    type="button"
+                    onClick={() => setIsCreating(false)}
+                    className="flex-1 py-4 border border-slate-200 dark:border-white/10 rounded-2xl font-black text-[10px] uppercase tracking-widest text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all active:scale-95"
+                  >
+                    Confirm Provision
+                  </button>
+                </div>
+             </form>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'HEALTH' && (
         <div className="space-y-8 animate-in zoom-in-95 duration-500">

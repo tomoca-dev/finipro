@@ -8,8 +8,8 @@ import BrandLogo from './BrandLogo';
 
 const Auth: React.FC = () => {
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
-  const [email, setEmail] = useState('');
+  const [mode] = useState<'login'>('login');
+  const [email, setEmail] = useState('btesfaye236@gmail.com');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -21,26 +21,8 @@ const Auth: React.FC = () => {
     setError(null);
     setMessage(null);
 
-    if (mode === 'login') {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setError(error.message);
-    } else {
-      const { error, data } = await supabase.auth.signUp({ 
-        email, 
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            role: 'FINANCE'
-          }
-        }
-      });
-      if (error) {
-        setError(error.message);
-      } else if (data.user && data.session === null) {
-        setMessage('Check your email for the confirmation link!');
-      }
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) setError(error.message);
     setLoading(false);
   };
 
@@ -132,30 +114,15 @@ const Auth: React.FC = () => {
                  <Lock size={28} className="text-white -rotate-3" />
               </div>
               <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                {mode === 'login' ? 'Institutional Login' : 'Provision Account'}
+                Institutional Login
               </h2>
               <p className="text-xs font-black uppercase tracking-widest text-slate-500 mt-2">
-                {mode === 'login' ? 'Authenticate to access the control room' : 'Create an administrative root account'}
+                Authenticate to access the control room
               </p>
             </div>
 
             <form onSubmit={handleAuth} className="space-y-5">
-              {mode === 'signup' && (
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Legal Name</label>
-                  <div className="relative group">
-                    <UserCircle size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                    <input 
-                      type="text" 
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="w-full bg-black/20 border border-white/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-500 font-bold text-white shadow-sm" 
-                      placeholder="John Doe"
-                      required
-                    />
-                  </div>
-                </div>
-              )}
+
               
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email Address</label>
@@ -205,22 +172,13 @@ const Auth: React.FC = () => {
                   disabled={loading}
                   className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-blue-900/30 flex items-center justify-center gap-2 active:scale-[0.98]"
                 >
-                  {loading ? <Loader2 size={18} className="animate-spin" /> : (
-                    <>{mode === 'login' ? 'Authorize Session' : 'Seal & Provision'}</>
-                  )}
+                  {loading ? <Loader2 size={18} className="animate-spin" /> : 'Authorize Session'}
                   {!loading && <ChevronRight size={16} />}
                 </button>
               </div>
             </form>
 
-            <div className="mt-8 text-center border-t border-slate-200 dark:border-white/10 pt-6">
-              <button 
-                onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
-                className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-500 transition-colors"
-              >
-                {mode === 'login' ? "Require an account? Provision here" : "Return to authorized login"}
-              </button>
-            </div>
+
 
           </div>
         </div>
