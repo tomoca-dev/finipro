@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase } from '../services/supabaseClient';
+import { resolveLoginIdentifier, supabase } from '../services/supabaseClient';
 import { 
   ShieldCheck, LogIn, Mail, Lock, Loader2, Sparkles, 
   UserCircle, Activity, Globe, Zap, CheckCircle2, ChevronRight
@@ -8,10 +8,8 @@ import BrandLogo from './BrandLogo';
 
 const Auth: React.FC = () => {
   const [loading, setLoading] = useState(false);
-  const [mode] = useState<'login'>('login');
-  const [email, setEmail] = useState('btesfaye236@gmail.com');
+  const [loginId, setLoginId] = useState('admin@2024');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -21,9 +19,15 @@ const Auth: React.FC = () => {
     setError(null);
     setMessage(null);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setError(error.message);
-    setLoading(false);
+    try {
+      const email = await resolveLoginIdentifier(loginId);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) setError(error.message);
+    } catch (err: any) {
+      setError(err?.message || 'Login failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -114,10 +118,10 @@ const Auth: React.FC = () => {
                  <Lock size={28} className="text-white -rotate-3" />
               </div>
               <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                Institutional Login
+                Secure Login
               </h2>
               <p className="text-xs font-black uppercase tracking-widest text-slate-500 mt-2">
-                Authenticate to access the control room
+                Admin-created accounts only
               </p>
             </div>
 
@@ -125,15 +129,15 @@ const Auth: React.FC = () => {
 
               
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email Address</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email or Username</label>
                 <div className="relative group">
                   <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                   <input 
-                    type="email" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    type="text" 
+                    value={loginId}
+                    onChange={(e) => setLoginId(e.target.value)}
                     className="w-full bg-black/20 border border-white/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-500 font-bold text-white shadow-sm" 
-                    placeholder="name@institution.com"
+                    placeholder="admin@2024 or email"
                     required
                   />
                 </div>

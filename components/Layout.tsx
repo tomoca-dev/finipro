@@ -50,8 +50,8 @@ const Layout: React.FC<LayoutProps> = ({
 
   const filteredNav = useMemo(() => {
     return NAVIGATION.filter(item => {
-      if (user.role === 'CEO' || user.role === 'FINANCE') return true;
-      if (user.role === 'STAFF') return ['dashboard'].includes(item.id);
+      if (user.role === 'ceo' || user.role === 'finance') return true;
+      if (user.role === 'staff') return ['dashboard'].includes(item.id);
       return ['dashboard', 'budget-builder', 'reports', 'analytics', 'insights', 'exports', 'pos-control', 'integrations'].includes(item.id);
     });
   }, [user.role]);

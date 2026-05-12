@@ -77,7 +77,7 @@ const App: React.FC = () => {
       id: session.user.id,
       name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
       email: session.user.email || '',
-      role: (session.user.user_metadata?.role as any) || 'FINANCE',
+      role: (session.user.user_metadata?.role as any) || 'finance',
       status: 'ACTIVE'
     };
   }, [session]);

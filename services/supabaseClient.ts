@@ -45,14 +45,35 @@ export const localDb = {
   }
 };
 
-
-
 export const getCurrentUserId = async (): Promise<string | null> => {
   const { data } = await supabase.auth.getUser();
   return data.user?.id ?? null;
 };
 
-export const ensureDefaultOrganization = async (orgName = 'Default Organization'): Promise<string> => {
+export const resolveLoginIdentifier = async (identifier: string): Promise<string> => {
+  const trimmed = identifier.trim().toLowerCase();
+  if (!trimmed) return trimmed;
+
+  // Admin-friendly shortcut requested for the locked-down login screen.
+  if (trimmed === 'admin@2024') return 'btesfaye236@gmail.com';
+
+  // If it looks like a normal email, use it directly.
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return trimmed;
+
+  // Otherwise resolve username/display login code through a security-definer RPC.
+  try {
+    const { data, error } = await supabase.rpc('resolve_login_identifier', {
+      p_identifier: trimmed,
+    });
+    if (!error && data) return String(data).toLowerCase();
+  } catch (err) {
+    console.warn('Username lookup unavailable; falling back to direct identifier.', err);
+  }
+
+  return trimmed;
+};
+
+export const ensureDefaultOrganization = async (orgName = 'FinOpsPro'): Promise<string> => {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError) throw userError;
   if (!userData.user) throw new Error('Not authenticated');

@@ -111,7 +111,7 @@ export enum TransactionType {
 }
 
 export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'ETB' | 'CNY';
-export type UserRole = 'CEO' | 'FINANCE' | 'DEPT_HEAD' | 'MANAGER' | 'STAFF' | 'ADMIN' | 'ACCOUNTANT';
+export type UserRole = 'ceo' | 'finance' | 'dept_head' | 'manager' | 'staff' | 'admin' | 'accountant' | 'finance_admin' | 'cashier' | 'auditor' | 'operations' | 'viewer' | 'owner';
 export type BudgetStatus = 'draft' | 'submitted' | 'approved' | 'locked' | 'DRAFT' | 'APPROVED';
 export type GovernanceStatus = 'PENDING' | 'APPROVED' | 'DENIED' | 'RESOLVED';
 export type RiskSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';

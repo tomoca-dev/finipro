@@ -21,10 +21,10 @@ const SageSystemConfig: React.FC<SageSystemConfigProps> = ({ user }) => {
   });
 
   const [thresholds, setThresholds] = useState<Record<string, number>>({
-    'CEO': 1000000,
-    'FINANCE': 150000,
-    'MANAGER': 50000,
-    'STAFF': 5000
+    'ceo': 1000000,
+    'finance': 150000,
+    'manager': 50000,
+    'staff': 5000
   });
 
   const handleUpdateThreshold = (role: string, val: number) => {
@@ -39,7 +39,7 @@ const SageSystemConfig: React.FC<SageSystemConfigProps> = ({ user }) => {
     }, 2000);
   };
 
-  if (user.role !== 'FINANCE' && user.role !== 'CEO' && user.role !== 'ADMIN') {
+  if (user.role !== 'finance' && user.role !== 'ceo' && user.role !== 'admin') {
     return (
       <div className="p-20 text-center space-y-8 animate-in fade-in">
         <div className="w-24 h-24 bg-red-500/10 text-red-500 rounded-[32px] flex items-center justify-center mx-auto shadow-inner border border-red-500/20">

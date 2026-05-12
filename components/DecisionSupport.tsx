@@ -13,7 +13,7 @@ const DecisionSupport: React.FC<{ records: any[] }> = ({ records }) => {
   const [playbook, setPlaybook] = useState<PlaybookStep[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPlaybookLoading, setIsPlaybookLoading] = useState(false);
-  const [activeRole, setActiveRole] = useState<'CEO' | 'DEPT' | 'MGMT'>('CEO');
+  const [activeRole, setActiveRole] = useState<'ceo' | 'dept' | 'mgmt'>('ceo');
 
   const [incentiveParams, setIncentiveParams] = useState({ bonusPool: 500000, target: 120 });
   const [simulationResult, setSimulationResult] = useState<any>(null);
@@ -88,7 +88,7 @@ const DecisionSupport: React.FC<{ records: any[] }> = ({ records }) => {
               <User size={16} className="text-blue-500" /> Scorecards
             </h3>
             <div className="flex gap-1 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
-              {['CEO', 'MGMT', 'DEPT'].map(role => (
+              {['ceo', 'mgmt', 'dept'].map(role => (
                 <button 
                   key={role}
                   onClick={() => setActiveRole(role as any)}
