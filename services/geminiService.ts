@@ -2,7 +2,13 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { TransactionType } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+const getAI = () => {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!apiKey || apiKey === 'PASTE_YOUR_NEW_KEY_HERE') {
+    throw new Error("GEMINI_API_KEY_MISSING");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 const withRetry = async <T>(fn: () => Promise<T>, retries = 5, initialDelay = 3000): Promise<T> => {
   let lastError: any;
@@ -29,7 +35,7 @@ const withRetry = async <T>(fn: () => Promise<T>, retries = 5, initialDelay = 30
 
 export const detectHeaders = async (headers: string[], fileType: string) => {
   return withRetry(async () => {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: `Map CSV headers to canonical schema for ${fileType}. Headers: ${headers.join(', ')}. Return mapping, confidence (0-100), and rationale for choice. Note: The institutional currency context is Ethiopian Birr (ETB).`,
       config: {
@@ -59,7 +65,7 @@ export const detectHeaders = async (headers: string[], fileType: string) => {
 
 export const analyzeVisualDocument = async (base64Image: string, mimeType: string) => {
   return withRetry(async () => {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: {
         parts: [
@@ -114,7 +120,7 @@ export const analyzeVisualDocument = async (base64Image: string, mimeType: strin
 
 export const synthesizeESGImpact = async (financials: any) => {
   return withRetry(async () => {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: `Synthesize ESG impact metrics based on the following institutional financial data: ${JSON.stringify(financials)}. 
       Consider infrastructure costs (carbon), travel, and logistics. Context: All currency values are in Ethiopian Birr (ETB).`,
@@ -149,7 +155,7 @@ export const synthesizeESGImpact = async (financials: any) => {
 
 export const analyzeReconciliation = async (posTotal: number, ledgerTotal: number, items: any[]) => {
   return withRetry(async () => {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Perform a reconciliation between POS Total (Br ${posTotal}) and Ledger Total (Br ${ledgerTotal}). Context is Ethiopian Birr (ETB). Items: ${JSON.stringify(items)}. Identify tolerance levels, timing variances (card vs cash), and investigation flags.`,
       config: {
@@ -171,7 +177,7 @@ export const analyzeReconciliation = async (posTotal: number, ledgerTotal: numbe
 
 export const performForensicAnalysis = async (records: any[]) => {
   return withRetry(async () => {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: `Auditing structural risk for period close in ETB: ${JSON.stringify(records.slice(0,5))}`,
       config: {
@@ -182,23 +188,23 @@ export const performForensicAnalysis = async (records: any[]) => {
   });
 };
 
-export const querySageLedgerAI = async (query: string, ledgerSummary: string) => { return withRetry(async () => { const response = await ai.models.generateContent({ model: 'gemini-3-pro-preview', contents: `Forensic financial auditor for Sage 50. Institutional context is Ethiopian Birr (ETB). CONTEXT: ${ledgerSummary} QUESTION: ${query}.`, }); return response.text; }); };
-export const generateAudioBrief = async (text: string): Promise<string | undefined> => { return withRetry(async () => { const response = await ai.models.generateContent({ model: "gemini-2.5-flash-preview-tts", contents: [{ parts: [{ text: `Say professionally: ${text}` }] }], config: { responseModalities: [Modality.AUDIO], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } } }); return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data; }); };
-export const generateCFOBrief = async (data: any) => { return withRetry(async () => { const response = await ai.models.generateContent({ model: 'gemini-3-pro-preview', contents: `1-paragraph CFO summary for institutional performance in ETB: ${JSON.stringify(data)}`, }); return response.text; }); };
-export const analyzeRiskExposure = async (records: any[]) => { return withRetry(async () => { const response = await ai.models.generateContent({ model: 'gemini-3-pro-preview', contents: `Institutional risk audit for ETB ledger: ${JSON.stringify(records.slice(0,10))}`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "[]"); }); };
-export const generateDecisionPlaybook = async (rec: any) => { return withRetry(async () => { const response = await ai.models.generateContent({ model: 'gemini-3-pro-preview', contents: `Step-by-step implementation for ETB-based initiative: ${rec.initiative}`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "[]"); }); };
-export const simulateIncentives = async (params: any) => { return withRetry(async () => { const response = await ai.models.generateContent({ model: 'gemini-3-pro-preview', contents: `Simulate incentives in ETB: ${JSON.stringify(params)}`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "{}"); }); };
-export const analyzeRootCause = async (variance: any) => { return withRetry(async () => { const response = await ai.models.generateContent({ model: 'gemini-3-pro-preview', contents: `Root cause analysis (ETB context): ${JSON.stringify(variance)}`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "{}"); }); };
-export const generateScenarioForecast = async (input: any) => { return withRetry(async () => { const response = await ai.models.generateContent({ model: 'gemini-3-pro-preview', contents: `Scenario forecast in ETB: ${JSON.stringify(input)}`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "[]"); }); };
-export const negotiateBudgetAI = async (dept: string, amt: number, roi: number) => { return withRetry(async () => { const response = await ai.models.generateContent({ model: 'gemini-3-pro-preview', contents: `Negotiate budget for ${dept} in ETB: Br ${amt}, ROI ${roi}x.`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "{}"); }); };
-export const evaluateInvestmentProject = async (p: any) => { return withRetry(async () => { const response = await ai.models.generateContent({ model: 'gemini-3-pro-preview', contents: `Evaluate project in ETB: ${p.name}`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "{}"); }); };
-export const forecastHiringROI = async (s: any) => { return withRetry(async () => { const response = await ai.models.generateContent({ model: 'gemini-3-pro-preview', contents: `Hiring ROI for ETB salary: ${s.role}`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "{}"); }); };
-export const generateExecutiveSummary = async (data: any) => { return withRetry(async () => { const response = await ai.models.generateContent({ model: 'gemini-3-pro-preview', contents: `2-paragraph summary (ETB context) for: ${JSON.stringify(data)}`, }); return response.text; }); };
-export const checkFinancialCompleteness = async (data: any) => { return withRetry(async () => { const response = await ai.models.generateContent({ model: 'gemini-3-pro-preview', contents: `ETB Ledger completeness: ${JSON.stringify(data)}`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "[]"); }); };
+export const querySageLedgerAI = async (query: string, ledgerSummary: string) => { return withRetry(async () => { const response = await getAI().models.generateContent({ model: 'gemini-3-pro-preview', contents: `Forensic financial auditor for Sage 50. Institutional context is Ethiopian Birr (ETB). CONTEXT: ${ledgerSummary} QUESTION: ${query}.`, }); return response.text; }); };
+export const generateAudioBrief = async (text: string): Promise<string | undefined> => { return withRetry(async () => { const response = await getAI().models.generateContent({ model: "gemini-2.5-flash-preview-tts", contents: [{ parts: [{ text: `Say professionally: ${text}` }] }], config: { responseModalities: [Modality.AUDIO], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } } }); return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data; }); };
+export const generateCFOBrief = async (data: any) => { return withRetry(async () => { const response = await getAI().models.generateContent({ model: 'gemini-3-pro-preview', contents: `1-paragraph CFO summary for institutional performance in ETB: ${JSON.stringify(data)}`, }); return response.text; }); };
+export const analyzeRiskExposure = async (records: any[]) => { return withRetry(async () => { const response = await getAI().models.generateContent({ model: 'gemini-3-pro-preview', contents: `Institutional risk audit for ETB ledger: ${JSON.stringify(records.slice(0,10))}`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "[]"); }); };
+export const generateDecisionPlaybook = async (rec: any) => { return withRetry(async () => { const response = await getAI().models.generateContent({ model: 'gemini-3-pro-preview', contents: `Step-by-step implementation for ETB-based initiative: ${rec.initiative}`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "[]"); }); };
+export const simulateIncentives = async (params: any) => { return withRetry(async () => { const response = await getAI().models.generateContent({ model: 'gemini-3-pro-preview', contents: `Simulate incentives in ETB: ${JSON.stringify(params)}`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "{}"); }); };
+export const analyzeRootCause = async (variance: any) => { return withRetry(async () => { const response = await getAI().models.generateContent({ model: 'gemini-3-pro-preview', contents: `Root cause analysis (ETB context): ${JSON.stringify(variance)}`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "{}"); }); };
+export const generateScenarioForecast = async (input: any) => { return withRetry(async () => { const response = await getAI().models.generateContent({ model: 'gemini-3-pro-preview', contents: `Scenario forecast in ETB: ${JSON.stringify(input)}`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "[]"); }); };
+export const negotiateBudgetAI = async (dept: string, amt: number, roi: number) => { return withRetry(async () => { const response = await getAI().models.generateContent({ model: 'gemini-3-pro-preview', contents: `Negotiate budget for ${dept} in ETB: Br ${amt}, ROI ${roi}x.`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "{}"); }); };
+export const evaluateInvestmentProject = async (p: any) => { return withRetry(async () => { const response = await getAI().models.generateContent({ model: 'gemini-3-pro-preview', contents: `Evaluate project in ETB: ${p.name}`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "{}"); }); };
+export const forecastHiringROI = async (s: any) => { return withRetry(async () => { const response = await getAI().models.generateContent({ model: 'gemini-3-pro-preview', contents: `Hiring ROI for ETB salary: ${s.role}`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "{}"); }); };
+export const generateExecutiveSummary = async (data: any) => { return withRetry(async () => { const response = await getAI().models.generateContent({ model: 'gemini-3-pro-preview', contents: `2-paragraph summary (ETB context) for: ${JSON.stringify(data)}`, }); return response.text; }); };
+export const checkFinancialCompleteness = async (data: any) => { return withRetry(async () => { const response = await getAI().models.generateContent({ model: 'gemini-3-pro-preview', contents: `ETB Ledger completeness: ${JSON.stringify(data)}`, config: { responseMimeType: "application/json" } }); return JSON.parse(response.text || "[]"); }); };
 
 export const validateDataAnomalies = async (rows: any[]) => {
   return withRetry(async () => {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Validate the following ETB financial rows for anomalies: ${JSON.stringify(rows)}`,
       config: {
@@ -223,7 +229,7 @@ export const validateDataAnomalies = async (rows: any[]) => {
 
 export const generateStrategicRecommendations = async (params: any) => {
   return withRetry(async () => {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: `Generate strategic recommendations based on these ETB records: ${JSON.stringify(params.records)}`,
       config: {
@@ -250,7 +256,7 @@ export const generateStrategicRecommendations = async (params: any) => {
 
 export const performDeepLedgerAudit = async (hash: string, mutation: any) => {
   return withRetry(async () => {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: `Perform a deep ledger lookup for audit hash ${hash}. Context is Ethiopian Birr (ETB). Analyze mutation: ${JSON.stringify(mutation)}. Explain accounting logic.`,
       config: {
