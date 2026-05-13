@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 const getSupabaseConfig = () => {
-  const url = import.meta.env.VITE_SUPABASE_URL || 'https://nyzkthznjqffhmswhrqe.supabase.co';
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  const url = import.meta.env.VITE_SUPABASE_URL || (typeof process !== 'undefined' ? process.env.SUPABASE_URL : '') || 'https://nyzkthznjqffhmswhrqe.supabase.co';
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY || (typeof process !== 'undefined' ? process.env.SUPABASE_ANON_KEY : '') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55emt0aHpuanFmZmhtc3docnFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyNzM5MTMsImV4cCI6MjA5Mjg0OTkxM30.XqrWkvJ0rdv3y41zrBYQ1wB48n7vnvvJPk0rkjMYvmg';
   return { url, key };
 };
 
