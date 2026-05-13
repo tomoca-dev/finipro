@@ -2,7 +2,7 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { TransactionType } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
 const withRetry = async <T>(fn: () => Promise<T>, retries = 5, initialDelay = 3000): Promise<T> => {
   let lastError: any;
