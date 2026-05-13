@@ -1,14 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+const getSupabaseConfig = () => {
+  const url = import.meta.env.VITE_SUPABASE_URL || 'https://nyzkthznjqffhmswhrqe.supabase.co';
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  return { url, key };
+};
+
+const { url: supabaseUrl, key: supabaseAnonKey } = getSupabaseConfig();
 
 export const isSupabaseConfigured = () => {
-  return Boolean(supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('placeholder'));
+  return Boolean(supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('invalid'));
 };
 
 export const supabase = createClient(
-  supabaseUrl || 'https://invalid.supabase.co',
+  supabaseUrl,
   supabaseAnonKey || 'invalid-anon-key',
   {
     auth: {
