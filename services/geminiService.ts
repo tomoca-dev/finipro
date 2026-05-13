@@ -3,7 +3,7 @@ import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { TransactionType } from "../types";
 
 const getAI = () => {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (typeof process !== 'undefined' ? process.env.API_KEY : '') || '';
   if (!apiKey || apiKey === 'PASTE_YOUR_NEW_KEY_HERE') {
     throw new Error("GEMINI_API_KEY_MISSING");
   }
